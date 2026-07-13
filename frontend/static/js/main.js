@@ -234,12 +234,26 @@ function mostrarPantalla(id) {
     ["pantalla-join", "pantalla-lobby", "pantalla-juego"].forEach(p => {
         document.getElementById(p).style.display = (p === id) ? "block" : "none";
     });
+    if (id === "pantalla-juego") {
+        document.getElementById("control-host").style.display =
+            (tuId !== null && tuId === hostId) ? "block" : "none";
+    }
 }
+
+document.getElementById("btn-forzar-lobby").addEventListener("click", () => {
+    if (confirm("¿Forzar el regreso de todos los jugadores a la sala de espera? Esto interrumpe la ronda actual.")) {
+        socket.emit("forzar_lobby", { game_id: gameId, jugador_id: tuId });
+    }
+});
 
 document.getElementById("btn-unirse").addEventListener("click", () => {
     const nombre = document.getElementById("input-nombre").value;
-    const game_id = document.getElementById("input-game-id").value || null;
+    const game_id = document.getElementById("input-game-id").value.toUpperCase() || null;
     socket.emit("join_game", { game_id, nombre_jugador: nombre });
+});
+
+document.getElementById("input-game-id").addEventListener("input", function () {
+    this.value = this.value.toUpperCase();
 });
 
 document.getElementById("btn-config").addEventListener("click", () => {
@@ -561,6 +575,8 @@ document.getElementById("btn-volver-lobby").addEventListener("click", () => {
 });
 
 socket.on("lobby:reiniciado", (data) => {
+    clearInterval(temporizadorPausa);
+    document.getElementById("banner-pausa").style.display = "none";
     hostId = data.host_id;
     document.getElementById("codigo-sala").textContent = gameId;
     renderizarListaJugadores(data.jugadores);
@@ -569,10 +585,31 @@ socket.on("lobby:reiniciado", (data) => {
     log("La partida volvió a la sala de espera.");
 });
 
+let temporizadorPausa = null;
+
 socket.on("game:pausado", (data) => {
-    document.getElementById("banner-pausa").style.display = "block";
+    const banner = document.getElementById("banner-pausa");
+    banner.style.display = "block";
+
+    let segundos = data.segundos_espera || 60;
+    const actualizarTexto = () => {
+        banner.textContent = `⏸ Partida en pausa: un jugador se desconectó. Si no vuelve en ${segundos}s, todos regresan a la sala.`;
+    };
+    actualizarTexto();
+
+    clearInterval(temporizadorPausa);
+    temporizadorPausa = setInterval(() => {
+        segundos -= 1;
+        if (segundos <= 0) {
+            clearInterval(temporizadorPausa);
+            banner.textContent = "⏸ Partida en pausa: volviendo a la sala...";
+            return;
+        }
+        actualizarTexto();
+    }, 1000);
 });
 
 socket.on("game:reanudado", () => {
+    clearInterval(temporizadorPausa);
     document.getElementById("banner-pausa").style.display = "none";
 });

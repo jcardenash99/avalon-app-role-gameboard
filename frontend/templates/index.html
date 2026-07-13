@@ -15,7 +15,7 @@
 
         <div id="pantalla-join">
             <input id="input-nombre" type="text" placeholder="Tu nombre">
-            <input id="input-game-id" type="text" placeholder="Código de sala (vacío para crear una)">
+            <input id="input-game-id" type="text" placeholder="Código de sala (vacío para crear una)" style="text-transform: uppercase;">
             <button id="btn-unirse">Unirme</button>
         </div>
 
@@ -32,6 +32,10 @@
         </div>
 
         <div id="pantalla-juego" style="display:none">
+            <div id="control-host" class="control-host" style="display:none">
+                <button id="btn-forzar-lobby" class="btn-forzar-lobby">Forzar regreso a la sala (todos)</button>
+            </div>
+
             <div id="vista-rol" class="subvista">
                 <div id="rol-reveal" class="rol-reveal">
                     <button id="sello" class="sello" aria-label="Toca para revelar tu identidad">

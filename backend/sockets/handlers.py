@@ -26,7 +26,7 @@ def registrar_handlers(socketio):
 
     @socketio.on("join_game")
     def on_join_game(data):
-        game_id = data.get("game_id")
+        game_id = (data.get("game_id") or "").strip().upper() or None
         nombre = data.get("nombre_jugador", "").strip()
 
         if not nombre:
@@ -233,12 +233,17 @@ def registrar_handlers(socketio):
         game = store.obtener_partida(data.get("game_id"))
         if game is None:
             return
-        game.reiniciar_para_lobby()
-        emit("lobby:reiniciado", {
-            "game_id": game.id,
-            "host_id": game.host_id,
-            "jugadores": [j.to_public_dict() for j in game.jugadores],
-        }, room=game.id)
+        _forzar_regreso_a_lobby(socketio, game)
+
+    @socketio.on("forzar_lobby")
+    def on_forzar_lobby(data):
+        game = store.obtener_partida(data.get("game_id"))
+        if game is None:
+            return
+        if not game.es_host(data.get("jugador_id")):
+            emit("lobby:error", {"mensaje": "Solo el host puede forzar el regreso a la sala."})
+            return
+        _forzar_regreso_a_lobby(socketio, game)
 
     @socketio.on("reconectar")
     def on_reconectar(data):
@@ -322,7 +327,9 @@ def registrar_handlers(socketio):
                 emit("game:pausado", {
                     "motivo": "jugador_desconectado",
                     "jugador_id": jugador.id,
+                    "segundos_espera": SEGUNDOS_ESPERA_PAUSA,
                 }, room=game.id)
+                _iniciar_temporizador_pausa(socketio, game.id, jugador.id)
                 break
 
 
@@ -359,6 +366,37 @@ def _reenviar_estado_actual(socketio, game, jugador):
         }, room=sid)
     elif game.fase_actual == Fase.FIN_JUEGO:
         socketio.emit("game:fin", _payload_fin_juego(game), room=sid)
+
+
+def _forzar_regreso_a_lobby(socketio, game):
+    game.reiniciar_para_lobby()
+    socketio.emit("lobby:reiniciado", {
+        "game_id": game.id,
+        "host_id": game.host_id,
+        "jugadores": [j.to_public_dict() for j in game.jugadores],
+    }, room=game.id)
+
+
+SEGUNDOS_ESPERA_PAUSA = 60
+
+
+def _iniciar_temporizador_pausa(socketio, game_id, jugador_id):
+    """
+    Si un jugador desconectado no vuelve en SEGUNDOS_ESPERA_PAUSA, regresa
+    a todos a la sala de espera automáticamente.
+    """
+    def tarea():
+        socketio.sleep(SEGUNDOS_ESPERA_PAUSA)
+        game = store.obtener_partida(game_id)
+        if game is None:
+            return
+        jugador = game.get_jugador(jugador_id)
+        # Solo forzamos el regreso si SIGUE pausado por ESE mismo jugador
+        # (si ya volvió, o si la partida avanzó de otra forma, no hacemos nada)
+        if game.pausado and jugador and not jugador.conectado:
+            _forzar_regreso_a_lobby(socketio, game)
+
+    socketio.start_background_task(tarea)
 
 
 def _payload_fin_juego(game) -> dict:

@@ -121,6 +121,26 @@ button:disabled:hover { background: rgba(255,255,255,0.06); }
     margin: 0 0 8px;
 }
 
+.control-host {
+    text-align: right;
+    padding: 8px 16px 0;
+}
+
+.btn-forzar-lobby {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    background: transparent !important;
+    border: 1px solid var(--crimson) !important;
+    color: var(--crimson) !important;
+}
+
+.btn-forzar-lobby:hover {
+    background: var(--crimson) !important;
+    color: #f2ede0 !important;
+}
+
 /* ---------- Pantalla de revelación de rol ---------- */
 
 .rol-reveal {
