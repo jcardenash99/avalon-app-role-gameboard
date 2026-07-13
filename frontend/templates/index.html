@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avalon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ range(1, 999999) | random }}">
+</head>
+<body>
+    <div id="app">
+        <h1>Avalon</h1>
+        <div id="banner-pausa" class="banner-pausa" style="display:none">
+            ⏸ Partida en pausa: un jugador se desconectó. Esperando a que vuelva...
+        </div>
+
+        <div id="pantalla-join">
+            <input id="input-nombre" type="text" placeholder="Tu nombre">
+            <input id="input-game-id" type="text" placeholder="Código de sala (vacío para crear una)">
+            <button id="btn-unirse">Unirme</button>
+        </div>
+
+        <div id="pantalla-lobby" style="display:none">
+            <p>Sala: <span id="codigo-sala"></span></p>
+            <ul id="lista-jugadores"></ul>
+            <select id="select-preset">
+                <option value="BASICO">Básico</option>
+                <option value="CLASICO" selected>Clásico</option>
+                <option value="COMPLETO">Completo</option>
+            </select>
+            <button id="btn-config">Guardar configuración</button>
+            <button id="btn-iniciar">Iniciar partida</button>
+        </div>
+
+        <div id="pantalla-juego" style="display:none">
+            <div id="vista-rol" class="subvista">
+                <div id="rol-reveal" class="rol-reveal">
+                    <button id="sello" class="sello" aria-label="Toca para revelar tu identidad">
+                        <svg class="sello-svg" viewBox="0 0 200 200">
+                            <defs>
+                                <radialGradient id="gradSello" cx="35%" cy="30%" r="75%">
+                                    <stop offset="0%" stop-color="#8a2f38"/>
+                                    <stop offset="100%" stop-color="#5c1c22"/>
+                                </radialGradient>
+                            </defs>
+                            <circle class="sello-circulo" cx="100" cy="100" r="92"/>
+                            <text x="100" y="112" text-anchor="middle" font-family="Cinzel, serif" font-size="42" fill="#c9a24b" opacity="0.85">A</text>
+                            <path class="sello-grieta" d="M100,100 L60,50"/>
+                            <path class="sello-grieta" d="M100,100 L145,55"/>
+                            <path class="sello-grieta" d="M100,100 L35,115"/>
+                            <path class="sello-grieta" d="M100,100 L160,120"/>
+                            <path class="sello-grieta" d="M100,100 L80,165"/>
+                            <path class="sello-grieta" d="M100,100 L130,160"/>
+                        </svg>
+                        <span class="sello-texto">Toca para revelar tu identidad</span>
+                    </button>
+
+                    <div id="carta-rol" class="carta-rol">
+                        <span id="carta-bando" class="carta-bando"></span>
+                        <h2 id="carta-titulo" class="carta-titulo"></h2>
+                        <hr class="carta-divisor">
+                        <p id="carta-descripcion" class="carta-descripcion"></p>
+                        <div id="carta-info" class="carta-info" style="display:none">
+                            <p class="carta-info-titulo">Lo que sabes</p>
+                            <ul id="carta-info-lista"></ul>
+                        </div>
+                        <button id="btn-continuar-rol" class="btn-continuar-rol">Continuar a la ronda</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vista-seleccion" class="subvista" style="display:none">
+                <div class="ronda-info">
+                    <p class="ronda-numero">Ronda <span id="ronda-numero-actual"></span> de 5</p>
+                    <p class="ronda-subtitulo"><span id="ronda-requeridos"></span> caballeros deben partir a esta misión</p>
+                    <div id="rechazos-tally" class="rechazos-tally"></div>
+                    <div id="historial-misiones" class="historial-misiones"></div>
+                </div>
+
+                <div id="lider-seleccion" class="lider-seleccion" style="display:none">
+                    <p class="seleccion-contador">Elegidos: <span id="contador-elegidos">0</span>/<span id="contador-requeridos">0</span></p>
+                    <div id="lista-chips" class="lista-chips"></div>
+                    <button id="btn-proponer" disabled>Proponer equipo</button>
+                </div>
+
+                <div id="espera-lider" class="espera-lider" style="display:none">
+                    <p>El líder, <strong id="nombre-lider"></strong>, está eligiendo su equipo<span class="puntos-espera"><span>.</span><span>.</span><span>.</span></span></p>
+                </div>
+
+                <div id="votacion-equipo" class="votacion-equipo" style="display:none">
+                    <p class="equipo-propuesto-nombres">El líder propone: <strong id="nombres-equipo-propuesto"></strong></p>
+                    <div class="botones-voto">
+                        <button id="btn-aprobar" class="btn-aprobar">Aprobar</button>
+                        <button id="btn-rechazar" class="btn-rechazar">Rechazar</button>
+                    </div>
+                    <p id="voto-estado" class="voto-estado" style="display:none"></p>
+                </div>
+
+                <div id="resultado-votacion" class="resultado-votacion" style="display:none">
+                    <p id="resultado-votacion-texto" class="resultado-votacion-texto"></p>
+                    <ul id="resultado-votacion-detalle" class="resultado-votacion-detalle"></ul>
+                </div>
+
+                <div id="mision-espera-placeholder" class="equipo-propuesto-msg" style="display:none">
+                    Equipo aprobado. La fase de votación de misión aún no está construida — próximo paso.
+                </div>
+
+                <div id="votacion-mision" class="votacion-mision" style="display:none">
+                    <p class="mision-instruccion">Decides el destino de esta misión, en secreto.</p>
+                    <div class="botones-voto">
+                        <button id="btn-mision-exito" class="btn-aprobar">Éxito</button>
+                        <button id="btn-mision-fracaso" class="btn-rechazar">Fracaso</button>
+                    </div>
+                    <p id="mision-voto-estado" class="voto-estado" style="display:none"></p>
+                </div>
+
+                <div id="mision-espera" class="espera-lider" style="display:none">
+                    <p>Los caballeros en la misión están decidiendo su destino<span class="puntos-espera"><span>.</span><span>.</span><span>.</span></span></p>
+                </div>
+
+                <div id="mision-resultado" class="resultado-votacion" style="display:none">
+                    <p id="mision-resultado-texto" class="resultado-votacion-texto"></p>
+                    <p id="mision-resultado-detalle" class="mision-resultado-detalle"></p>
+                </div>
+            </div>
+
+            <div id="vista-asesinato" class="subvista" style="display:none">
+                <p class="mision-instruccion">El bien ha completado 3 misiones. El asesino tiene una última oportunidad de arrebatar la victoria.</p>
+
+                <div id="asesino-seleccion" style="display:none">
+                    <p class="seleccion-contador">Elige a quien crees que es Merlín</p>
+                    <div id="lista-chips-asesinato" class="lista-chips"></div>
+                    <button id="btn-asesinar" disabled>Señalar objetivo</button>
+                </div>
+
+                <div id="asesinato-espera" class="espera-lider" style="display:none">
+                    <p>El asesino está eligiendo su objetivo<span class="puntos-espera"><span>.</span><span>.</span><span>.</span></span></p>
+                </div>
+            </div>
+
+            <div id="vista-fin" class="subvista" style="display:none">
+                <div class="fin-banner">
+                    <h2 id="fin-titulo" class="fin-titulo"></h2>
+                    <p id="fin-motivo" class="fin-subtitulo"></p>
+                </div>
+                <ul id="fin-roles" class="resultado-votacion-detalle"></ul>
+                <button id="btn-volver-lobby">Volver a la sala</button>
+            </div>
+
+            <details class="debug-detalle">
+                <summary>Ver estado técnico (debug)</summary>
+                <pre id="debug-estado"></pre>
+            </details>
+        </div>
+
+        <div id="mensajes"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v={{ range(1, 999999) | random }}"></script>
+</body>
+</html>
