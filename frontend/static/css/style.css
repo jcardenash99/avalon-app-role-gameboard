@@ -474,6 +474,9 @@ button:disabled:hover { background: rgba(255,255,255,0.06); }
 
 .resultado-votacion {
     text-align: center;
+    border-radius: 12px;
+    padding: 16px;
+    transition: background-color 0.5s ease;
 }
 
 .resultado-votacion-texto {
@@ -535,6 +538,13 @@ button:disabled:hover { background: rgba(255,255,255,0.06); }
     font-size: 13px;
     color: var(--text-soft);
     text-align: center;
+}
+
+.mision-resultado-tally {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    margin-top: 10px;
 }
 
 /* ---------- Fin de juego ---------- */

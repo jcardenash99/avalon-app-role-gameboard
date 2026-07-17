@@ -176,15 +176,7 @@ def registrar_handlers(socketio):
         if game_logic.todos_votaron_equipo(game):
             resumen = game_logic.resolver_votacion_equipo(game)
             emit("equipo:resultado", resumen, room=game.id)
-
-            if game.fase_actual == Fase.SELECCION_EQUIPO:
-                emit("ronda:nueva", game.estado_publico(), room=game.id)
-            elif game.fase_actual == Fase.VOTACION_MISION:
-                emit("mision:en_curso", {
-                    "jugadores_en_mision": game.mision_actual().equipo_propuesto
-                }, room=game.id)
-            elif game.fase_actual == Fase.FIN_JUEGO:
-                emit("game:fin", _payload_fin_juego(game), room=game.id)
+            socketio.start_background_task(_continuar_tras_equipo, socketio, game)
 
     @socketio.on("votar_mision")
     def on_votar_mision(data):
@@ -208,16 +200,7 @@ def registrar_handlers(socketio):
             emit("game:estado_general", game.estado_publico(), room=game.id)
 
             game_logic.avanzar_despues_de_resultado(game)
-
-            if game.fase_actual == Fase.SELECCION_EQUIPO:
-                emit("ronda:nueva", game.estado_publico(), room=game.id)
-            elif game.fase_actual == Fase.ASESINATO:
-                emit("game:fase_asesinato", {
-                    "asesino_id": game.asesino_id,
-                    "candidatos": [j.id for j in game.jugadores if j.bando.value == "BUENO"],
-                }, room=game.id)
-            elif game.fase_actual == Fase.FIN_JUEGO:
-                emit("game:fin", _payload_fin_juego(game), room=game.id)
+            socketio.start_background_task(_continuar_tras_mision, socketio, game)
 
     @socketio.on("asesinar")
     def on_asesinar(data):
@@ -397,6 +380,33 @@ def _iniciar_temporizador_pausa(socketio, game_id, jugador_id):
             _forzar_regreso_a_lobby(socketio, game)
 
     socketio.start_background_task(tarea)
+
+
+def _continuar_tras_equipo(socketio, game):
+    """Espera 3s (el tiempo del banner de resultado de equipo) antes de avanzar de fase."""
+    socketio.sleep(3)
+    if game.fase_actual == Fase.SELECCION_EQUIPO:
+        socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
+    elif game.fase_actual == Fase.VOTACION_MISION:
+        socketio.emit("mision:en_curso", {
+            "jugadores_en_mision": game.mision_actual().equipo_propuesto
+        }, room=game.id)
+    elif game.fase_actual == Fase.FIN_JUEGO:
+        socketio.emit("game:fin", _payload_fin_juego(game), room=game.id)
+
+
+def _continuar_tras_mision(socketio, game):
+    """Espera 2s (el tiempo del banner de resultado de misión) antes de avanzar de fase."""
+    socketio.sleep(2)
+    if game.fase_actual == Fase.SELECCION_EQUIPO:
+        socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
+    elif game.fase_actual == Fase.ASESINATO:
+        socketio.emit("game:fase_asesinato", {
+            "asesino_id": game.asesino_id,
+            "candidatos": [j.id for j in game.jugadores if j.bando.value == "BUENO"],
+        }, room=game.id)
+    elif game.fase_actual == Fase.FIN_JUEGO:
+        socketio.emit("game:fin", _payload_fin_juego(game), room=game.id)
 
 
 def _payload_fin_juego(game) -> dict:
