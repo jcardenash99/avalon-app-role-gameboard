@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, make_response
 from flask_socketio import SocketIO
 
 from backend.sockets.handlers import registrar_handlers
@@ -17,7 +17,11 @@ registrar_handlers(socketio)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # Nunca guardar esta página en caché: así el navegador SIEMPRE vuelve a pedir
+    # el HTML al servidor, y con él, la versión más reciente de CSS/JS.
+    respuesta = make_response(render_template("index.html"))
+    respuesta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return respuesta
 
 
 if __name__ == "__main__":
