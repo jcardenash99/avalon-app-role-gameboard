@@ -176,7 +176,7 @@ def registrar_handlers(socketio):
         if game_logic.todos_votaron_equipo(game):
             resumen = game_logic.resolver_votacion_equipo(game)
             emit("equipo:resultado", resumen, room=game.id)
-            socketio.start_background_task(_continuar_tras_equipo, socketio, game)
+            socketio.start_background_task(_continuar_tras_equipo, socketio, game, resumen)
 
     @socketio.on("votar_mision")
     def on_votar_mision(data):
@@ -200,7 +200,7 @@ def registrar_handlers(socketio):
             emit("game:estado_general", game.estado_publico(), room=game.id)
 
             game_logic.avanzar_despues_de_resultado(game)
-            socketio.start_background_task(_continuar_tras_mision, socketio, game)
+            socketio.start_background_task(_continuar_tras_mision, socketio, game, resumen)
 
     @socketio.on("asesinar")
     def on_asesinar(data):
@@ -382,9 +382,10 @@ def _iniciar_temporizador_pausa(socketio, game_id, jugador_id):
     socketio.start_background_task(tarea)
 
 
-def _continuar_tras_equipo(socketio, game):
+def _continuar_tras_equipo(socketio, game, resumen):
     """Espera 3s (el tiempo del banner de resultado de equipo) antes de avanzar de fase."""
     socketio.sleep(3)
+    socketio.emit("equipo:resultado_detalle", resumen, room=game.id)
     if game.fase_actual == Fase.SELECCION_EQUIPO:
         socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
     elif game.fase_actual == Fase.VOTACION_MISION:
@@ -395,9 +396,10 @@ def _continuar_tras_equipo(socketio, game):
         socketio.emit("game:fin", _payload_fin_juego(game), room=game.id)
 
 
-def _continuar_tras_mision(socketio, game):
+def _continuar_tras_mision(socketio, game, resumen):
     """Espera 2s (el tiempo del banner de resultado de misión) antes de avanzar de fase."""
     socketio.sleep(2)
+    socketio.emit("mision:resultado_detalle", resumen, room=game.id)
     if game.fase_actual == Fase.SELECCION_EQUIPO:
         socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
     elif game.fase_actual == Fase.ASESINATO:

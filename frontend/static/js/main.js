@@ -418,13 +418,10 @@ socket.on("equipo:voto_registrado", (data) => {
 socket.on("equipo:resultado", (data) => {
     document.getElementById("votacion-equipo").style.display = "none";
 
-    const nombresPorId = {};
-    (ultimoEstado ? ultimoEstado.jugadores : []).forEach(j => { nombresPorId[j.id] = j.nombre; });
-
     const texto = document.getElementById("resultado-votacion-texto");
     const lista = document.getElementById("resultado-votacion-detalle");
 
-    // Fase 1 (0s): solo el titular, en suspenso — sin desglose todavía
+    // Solo el titular, en suspenso — el detalle lo manda el servidor después (equipo:resultado_detalle)
     texto.textContent = data.aprobado ? "Equipo elegido" : "Equipo rechazado, cambio de líder";
     texto.style.color = data.aprobado ? "var(--steel)" : "var(--crimson)";
     lista.style.display = "none";
@@ -432,21 +429,26 @@ socket.on("equipo:resultado", (data) => {
     document.getElementById("resultado-votacion").style.display = "block";
 
     log(`Equipo ${data.aprobado ? "aprobado" : "rechazado"} (${data.votos_a_favor} a favor, ${data.votos_en_contra} en contra)`);
+});
 
-    // Fase 2 (a los 3s): revelamos quién votó qué, con el conteo completo
-    setTimeout(() => {
-        texto.textContent = data.aprobado
-            ? `Equipo aprobado (${data.votos_a_favor} a favor, ${data.votos_en_contra} en contra)`
-            : `Equipo rechazado (${data.votos_a_favor} a favor, ${data.votos_en_contra} en contra)`;
+socket.on("equipo:resultado_detalle", (data) => {
+    const nombresPorId = {};
+    (ultimoEstado ? ultimoEstado.jugadores : []).forEach(j => { nombresPorId[j.id] = j.nombre; });
 
-        lista.innerHTML = Object.entries(data.detalle_por_jugador).map(([id, aprueba]) => `
-            <li>
-                <span>${nombresPorId[id] || id}</span>
-                <span class="${aprueba ? "voto-si" : "voto-no"}">${aprueba ? "Aprobó" : "Rechazó"}</span>
-            </li>
-        `).join("");
-        lista.style.display = "block";
-    }, 3000);
+    const texto = document.getElementById("resultado-votacion-texto");
+    const lista = document.getElementById("resultado-votacion-detalle");
+
+    texto.textContent = data.aprobado
+        ? `Equipo aprobado (${data.votos_a_favor} a favor, ${data.votos_en_contra} en contra)`
+        : `Equipo rechazado (${data.votos_a_favor} a favor, ${data.votos_en_contra} en contra)`;
+
+    lista.innerHTML = Object.entries(data.detalle_por_jugador).map(([id, aprueba]) => `
+        <li>
+            <span>${nombresPorId[id] || id}</span>
+            <span class="${aprueba ? "voto-si" : "voto-no"}">${aprueba ? "Aprobó" : "Rechazó"}</span>
+        </li>
+    `).join("");
+    lista.style.display = "block";
 });
 
 socket.on("mision:en_curso", (data) => {
@@ -503,7 +505,7 @@ socket.on("mision:resultado", (data) => {
     const detalle = document.getElementById("mision-resultado-detalle");
     const tally = document.getElementById("mision-resultado-tally");
 
-    // Fase 1 (0s): suspenso, sin revelar el resultado todavía
+    // Solo el suspenso — el detalle lo manda el servidor después (mision:resultado_detalle)
     contenedor.style.backgroundColor = "";
     texto.textContent = "La misión fue...";
     texto.style.color = "var(--gold)";
@@ -513,20 +515,24 @@ socket.on("mision:resultado", (data) => {
 
     log(`Resultado de misión: ${data.resultado}` +
         (data.conteo_fracasos !== null ? ` (${data.conteo_fracasos} fracasos)` : ""));
+});
 
-    // Fase 2 (a los 2s): revelamos el resultado con fondo de color y el marcador global
-    setTimeout(() => {
-        const esExito = data.resultado === "EXITO";
-        contenedor.style.backgroundColor = esExito ? "var(--steel)" : "var(--crimson)";
-        texto.textContent = esExito ? "Un éxito" : "Un fracaso";
-        texto.style.color = "#f2ede0";
-        detalle.style.color = "#f2ede0";
-        detalle.textContent = (data.conteo_fracasos !== null)
-            ? `${data.conteo_fracasos} voto(s) de fracaso`
-            : "";
-        tally.style.color = "#f2ede0";
-        tally.textContent = `Éxitos: ${ultimoTally.bien} — Fracasos: ${ultimoTally.mal}`;
-    }, 2000);
+socket.on("mision:resultado_detalle", (data) => {
+    const contenedor = document.getElementById("mision-resultado");
+    const texto = document.getElementById("mision-resultado-texto");
+    const detalle = document.getElementById("mision-resultado-detalle");
+    const tally = document.getElementById("mision-resultado-tally");
+
+    const esExito = data.resultado === "EXITO";
+    contenedor.style.backgroundColor = esExito ? "var(--steel)" : "var(--crimson)";
+    texto.textContent = esExito ? "Un éxito" : "Un fracaso";
+    texto.style.color = "#f2ede0";
+    detalle.style.color = "#f2ede0";
+    detalle.textContent = (data.conteo_fracasos !== null)
+        ? `${data.conteo_fracasos} voto(s) de fracaso`
+        : "";
+    tally.style.color = "#f2ede0";
+    tally.textContent = `Éxitos: ${ultimoTally.bien} — Fracasos: ${ultimoTally.mal}`;
 });
 
 let seleccionadoAsesinato = null;
