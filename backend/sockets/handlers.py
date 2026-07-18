@@ -383,9 +383,10 @@ def _iniciar_temporizador_pausa(socketio, game_id, jugador_id):
 
 
 def _continuar_tras_equipo(socketio, game, resumen):
-    """Espera 3s (el tiempo del banner de resultado de equipo) antes de avanzar de fase."""
+    """Espera 3s (suspenso) + emite el detalle + espera 2s más (para poder leerlo) antes de avanzar de fase."""
     socketio.sleep(3)
     socketio.emit("equipo:resultado_detalle", resumen, room=game.id)
+    socketio.sleep(2)
     if game.fase_actual == Fase.SELECCION_EQUIPO:
         socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
     elif game.fase_actual == Fase.VOTACION_MISION:
@@ -397,9 +398,10 @@ def _continuar_tras_equipo(socketio, game, resumen):
 
 
 def _continuar_tras_mision(socketio, game, resumen):
-    """Espera 2s (el tiempo del banner de resultado de misión) antes de avanzar de fase."""
+    """Espera 2s (suspenso) + emite el detalle + espera 2s más (para poder leerlo) antes de avanzar de fase."""
     socketio.sleep(2)
     socketio.emit("mision:resultado_detalle", resumen, room=game.id)
+    socketio.sleep(2)
     if game.fase_actual == Fase.SELECCION_EQUIPO:
         socketio.emit("ronda:nueva", game.estado_publico(), room=game.id)
     elif game.fase_actual == Fase.ASESINATO:
